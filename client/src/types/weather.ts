@@ -44,6 +44,8 @@ export interface WeatherResponse {
   sources: WeatherSource[];
   mostAccurate: WeatherSource;
   aggregated: WeatherSource;
+  demo?: boolean;
+  message?: string;
 }
 
 export interface Location {

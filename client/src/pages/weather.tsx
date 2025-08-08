@@ -149,6 +149,23 @@ export default function WeatherPage() {
           </Card>
         ) : weatherData ? (
           <>
+            {/* Demo Data Banner */}
+            {weatherData.demo && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                    <span className="text-yellow-600">⚠️</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Using Demo Data</h3>
+                    <p className="text-yellow-700 text-sm">
+                      {weatherData.message || "Please provide valid API keys for real weather data"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <CurrentWeather
               weatherData={weatherData.sources}
               mostAccurate={weatherData.mostAccurate}

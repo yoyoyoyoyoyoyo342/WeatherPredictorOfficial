@@ -24,6 +24,41 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.weatherData = new Map();
     this.locations = new Map();
+    
+    // Pre-populate with popular cities for fallback
+    this.initializePopularCities();
+  }
+
+  private initializePopularCities() {
+    const popularCities = [
+      { name: "New York", latitude: 40.7128, longitude: -74.0060, country: "US", state: "NY" },
+      { name: "Los Angeles", latitude: 34.0522, longitude: -118.2437, country: "US", state: "CA" },
+      { name: "Chicago", latitude: 41.8781, longitude: -87.6298, country: "US", state: "IL" },
+      { name: "Houston", latitude: 29.7604, longitude: -95.3698, country: "US", state: "TX" },
+      { name: "Phoenix", latitude: 33.4484, longitude: -112.0740, country: "US", state: "AZ" },
+      { name: "Philadelphia", latitude: 39.9526, longitude: -75.1652, country: "US", state: "PA" },
+      { name: "San Antonio", latitude: 29.4241, longitude: -98.4936, country: "US", state: "TX" },
+      { name: "San Diego", latitude: 32.7157, longitude: -117.1611, country: "US", state: "CA" },
+      { name: "Dallas", latitude: 32.7767, longitude: -96.7970, country: "US", state: "TX" },
+      { name: "San Jose", latitude: 37.3382, longitude: -121.8863, country: "US", state: "CA" },
+      { name: "London", latitude: 51.5074, longitude: -0.1278, country: "GB", state: undefined },
+      { name: "Paris", latitude: 48.8566, longitude: 2.3522, country: "FR", state: undefined },
+      { name: "Tokyo", latitude: 35.6762, longitude: 139.6503, country: "JP", state: undefined },
+      { name: "Sydney", latitude: -33.8688, longitude: 151.2093, country: "AU", state: "NSW" },
+      { name: "Toronto", latitude: 43.6532, longitude: -79.3832, country: "CA", state: "ON" },
+    ];
+
+    popularCities.forEach(city => {
+      const id = randomUUID();
+      const location: Location = { 
+        ...city, 
+        id, 
+        createdAt: new Date(),
+        state: city.state || null,
+        country: city.country || null
+      };
+      this.locations.set(id, location);
+    });
   }
 
   async getUser(id: string): Promise<any | undefined> {
@@ -55,7 +90,11 @@ export class MemStorage implements IStorage {
     const weatherData: WeatherData = { 
       ...data, 
       id, 
-      fetchedAt: new Date() 
+      fetchedAt: new Date(),
+      accuracy: data.accuracy || null,
+      currentWeather: data.currentWeather || null,
+      hourlyForecast: data.hourlyForecast || null,
+      dailyForecast: data.dailyForecast || null
     };
     this.weatherData.set(id, weatherData);
     return weatherData;
@@ -72,7 +111,9 @@ export class MemStorage implements IStorage {
     const loc: Location = { 
       ...location, 
       id, 
-      createdAt: new Date() 
+      createdAt: new Date(),
+      country: location.country || null,
+      state: location.state || null
     };
     this.locations.set(id, loc);
     return loc;

@@ -21,13 +21,15 @@ export function CurrentWeather({
   const sourceColors = {
     openweathermap: "bg-secondary",
     accuweather: "bg-accent",
-    weatherapi: "bg-primary"
+    weatherapi: "bg-primary",
+    demo: "bg-neutral-400"
   };
 
   const sourceNames = {
     openweathermap: "OpenWeatherMap",
     accuweather: "AccuWeather",
-    weatherapi: "WeatherAPI"
+    weatherapi: "WeatherAPI",
+    demo: "Demo Data"
   };
 
   const getSourceAbbreviation = (source: string) => {

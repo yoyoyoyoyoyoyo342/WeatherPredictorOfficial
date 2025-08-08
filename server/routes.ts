@@ -20,7 +20,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Try to fetch from OpenWeatherMap Geocoding API first
       try {
-        const response = await axios.get(`http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${OPENWEATHER_API_KEY}`);
+        console.log(`Searching for location: ${q} with API key: ${OPENWEATHER_API_KEY ? 'provided' : 'missing'}`);
+        const response = await axios.get(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${OPENWEATHER_API_KEY}`);
         const locations = response.data.map((loc: any) => ({
           name: loc.name,
           latitude: loc.lat,
@@ -39,8 +40,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         return res.json(locations);
-      } catch (apiError) {
-        console.error("External API error:", apiError);
+      } catch (apiError: any) {
+        console.error("External API error:", apiError.response?.data || apiError.message);
+        
+        // If API key is invalid, fall back to local storage
+        if (apiError.response?.status === 401) {
+          console.log("API key invalid, falling back to local storage search");
+        }
+        
         // Fallback to local storage
         const localResults = await storage.searchLocations(q);
         return res.json(localResults);
@@ -70,7 +77,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(Boolean);
 
       if (successfulResults.length === 0) {
-        return res.status(503).json({ message: "Failed to fetch weather data from all sources" });
+        // If all sources fail, return mock data for demonstration
+        const mockWeatherData = {
+          source: 'demo',
+          location: `Demo Location (${lat}, ${lon})`,
+          latitude: lat,
+          longitude: lon,
+          accuracy: 0.85,
+          currentWeather: {
+            temperature: 72,
+            condition: "Partly Cloudy",
+            description: "Partly cloudy with light winds",
+            humidity: 65,
+            windSpeed: 8,
+            windDirection: 240,
+            visibility: 10,
+            feelsLike: 75,
+            uvIndex: 6,
+            pressure: 30.12
+          },
+          hourlyForecast: Array.from({ length: 24 }, (_, i) => ({
+            time: new Date(Date.now() + i * 3600000).toLocaleTimeString('en-US', { hour: 'numeric' }),
+            temperature: 72 + Math.sin(i / 4) * 5,
+            condition: i % 3 === 0 ? "Sunny" : i % 3 === 1 ? "Cloudy" : "Partly Cloudy",
+            precipitation: Math.random() * 30,
+            icon: "01d"
+          })),
+          dailyForecast: Array.from({ length: 10 }, (_, i) => ({
+            day: i === 0 ? 'Today' : new Date(Date.now() + i * 86400000).toLocaleDateString('en-US', { weekday: 'short' }),
+            condition: i % 3 === 0 ? "Sunny" : i % 3 === 1 ? "Rainy" : "Cloudy",
+            description: "Weather forecast",
+            highTemp: 75 + Math.random() * 10,
+            lowTemp: 60 + Math.random() * 8,
+            precipitation: Math.random() * 40,
+            icon: "01d"
+          }))
+        };
+        
+        return res.json({
+          sources: [mockWeatherData],
+          mostAccurate: mockWeatherData,
+          aggregated: mockWeatherData,
+          demo: true,
+          message: "Using demo data - please check your API keys for real weather data"
+        });
       }
 
       // Calculate accuracy scores
@@ -176,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   async function fetchWeatherAPI(lat: number, lon: number) {
-    const response = await axios.get(`http://api.weatherapi.com/v1/forecast.json?key=${WEATHERAPI_KEY}&q=${lat},${lon}&days=10&aqi=yes`);
+    const response = await axios.get(`https://api.weatherapi.com/v1/forecast.json?key=${WEATHERAPI_KEY}&q=${lat},${lon}&days=10&aqi=yes`);
     const data = response.data;
 
     return {
@@ -217,12 +267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   async function fetchAccuWeather(lat: number, lon: number) {
     // AccuWeather requires location key first
-    const locationRes = await axios.get(`http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${ACCUWEATHER_KEY}&q=${lat},${lon}`);
+    const locationRes = await axios.get(`https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${ACCUWEATHER_KEY}&q=${lat},${lon}`);
     const locationKey = locationRes.data.Key;
 
     const [currentRes, forecastRes] = await Promise.all([
-      axios.get(`http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${ACCUWEATHER_KEY}&details=true`),
-      axios.get(`http://dataservice.accuweather.com/forecasts/v1/daily/10day/${locationKey}?apikey=${ACCUWEATHER_KEY}&details=true&metric=false`)
+      axios.get(`https://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${ACCUWEATHER_KEY}&details=true`),
+      axios.get(`https://dataservice.accuweather.com/forecasts/v1/daily/10day/${locationKey}?apikey=${ACCUWEATHER_KEY}&details=true&metric=false`)
     ]);
 
     const current = currentRes.data[0];
